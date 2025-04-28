@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Thieving Drop Rate Calculator</title>
+  <script src="jspsych/jspsych.js"></script>
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/plugin-survey-html-form.js"></script>
+  <script src="jspsych/plugin-call-function.js"></script>
+  <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      background: url('imgs/old-school-runescape-map.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+    #jspsych-target { position: relative; height: 100%; }
+    .instruction-dialog {
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 800px;
+      margin: 40px auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .side-image { width: 200px; height: auto; }
+    .left-image { transform: scaleX(-1); margin-right: 20px; }
+    .right-image { margin-left: 20px; }
+    .instruction-content { font-size: 1.1em; text-align: center; color: #000; }
+    .instruction-dialog p { margin: 0.8em 0; }
+    .instruction-dialog input, .instruction-dialog select {
+      padding: 5px; font-size: 1em; margin-top: 5px; width: 100%; max-width: 200px;
+    }
+    .item-entry { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+    .item-label { display: flex; align-items: center; gap: 6px; min-width: 200px; text-align: right; justify-content: flex-end; }
+    .item-icon { width: 32px; height: 32px; object-fit: contain; }
+    .results-table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    .results-table th, .results-table td {
+      border: 1px solid #bbb; padding: 6px; font-size: 0.95em;
+    }
+    .results-table th { background: #eee; }
+  </style>
+  <script>
+    const createInstructionDialog = content => `
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <img class="side-image left-image" src="imgs/rocky.png" alt="Pet">
+        <div class="instruction-dialog">
+          <div class="instruction-content">
+            ${content}
+          </div>
+        </div>
+        <img class="side-image right-image" src="imgs/rocky.png" alt="Pet">
+      </div>
+    `;
+
+    const jsPsych = initJsPsych();
+
+    const averageDropRates = {
+      "men_woman": 3.88786E-06,
+      "farmer": 3.88786E-06,
+      "ham member": 3.88786E-06,
+      "warrior": 3.88786E-06,
+      "alkarid warrior": 3.88786E-06,
+      "villager": 3.88786E-06,
+      "rogue": 3.88786E-06,
+      "cave goblin": 3.88786E-06,
+      "master farmer": 3.88786E-06,
+      "guard": 3.88786E-06,
+      "fremennik citizen": 3.88786E-06,
+      "bandit pollnivneach": 3.88786E-06,
+      "wealthy citizen": 3.88786E-06,
+      "bandit bandit camp": 3.88786E-06,
+      "knight of ardougne": 3.88786E-06,
+      "menaphite thug": 3.88786E-06,
+      "watchman": 7.42804E-06,
+      "paladin": 7.87055E-06,
+      "gnome": 9.19811E-06,
+      "hero": 1.00832E-05,
+      "elf": 1.00832E-05,
+      "vyre": 1.00832E-05,
+      "tzhaar hur": 5.65793E-06,
+      "stealing valuables": 4.83613E-06,
+      "veg stall": 4.83613E-06,
+      "bakery stall": 8.06023E-06,
+      "crafting stall": 2.09565E-05,
+      "food stall": 2.09565E-05,
+      "silk stall": 1.45083E-05,
+      "tea stall": 1.45083E-05,
+      "market stall wine": 2.74048E-05,
+      "fruit stall": 8.06023E-06,
+      "seed stall": 2.74048E-05,
+      "fur stall": 2.74048E-05,
+      "fish stall": 2.74048E-05,
+      "crossbow stall": 2.74048E-05,
+      "silver stall": 2.74048E-05,
+      "magic stall": 2.74048E-05,
+      "scimitar stall": 2.74048E-05,
+      "spice stall": 2.74048E-05,
+      "gem stall": 2.74048E-05,
+      "ore stall": 2.74048E-05,
+      "grand gold chest room 1": 2.41809E-05,
+      "grand gold chest room 2": 3.38524E-05,
+      "grand gold chest room 3": 3.86892E-05,
+      "grand gold chest room 4": 4.83606E-05,
+      "grand gold chest room 5": 4.83606E-05,
+      "grand gold chest room 6": 4.83606E-05,
+      "grand gold chest room 7": 9.67212E-05,
+      "grand gold chest room 8": 0.000145075,
+      "sqirk tree": 9.67212E-05
+    };
+
+    let calculationResults;
+    let beaverChance;
+
+    const sortedItems = Object.keys(averageDropRates);
+
+    const combined_input_trial = {
+      type: jsPsychSurveyHtmlForm,
+      html: createInstructionDialog(`
+        <p><strong>Welcome to the Thieving Drop Rate Calculator.</strong></p>
+        <p>Enter the number of each action you performed.</p>
+        ${sortedItems.map(item => `
+          <div class="item-entry">
+            <span class="item-label">
+              <img class="item-icon" src="imgs/${item}.png" alt="${item}">
+              ${item}:
+            </span>
+            <input name="${item}" type="number" step="1" min="0" placeholder="0">
+          </div>
+        `).join('')}
+      `),
+      button_label: 'Submit'
+    };
+
+    const calculate_trial = {
+      type: jsPsychCallFunction,
+      func: () => {
+        const raw = jsPsych.data.get().last(1).values()[0].response;
+        const resp = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const results = {};
+        let sum = 0;
+        for (const item of Object.keys(averageDropRates)) {
+          const count = parseFloat(resp[item]) || 0;
+          if (count > 0) {
+            const itemBeaverChance = count * averageDropRates[item];
+            results[item] = { count, itemBeaverChance };
+            sum += itemBeaverChance;
+          }
+        }
+        calculationResults = results;
+        beaverChance = sum;
+      }
+    };
+
+    const feedback_trial = {
+      type: jsPsychHtmlKeyboardResponse,
+      choices: [],
+      stimulus: () => {
+        if (calculationResults.error) {
+          return createInstructionDialog(`
+            <p>${calculationResults.error}</p>
+            <p><strong>To restart, press F5 on your keyboard.</strong></p>
+          `);
+        }
+        let table = `<table class="results-table">
+          <tr>
+            <th>Activity</th>
+            <th>Count</th>
+            <th>Chance (per action)</th>
+          </tr>`;
+        for (const item of Object.keys(calculationResults)) {
+          const stats = calculationResults[item];
+          table += `
+            <tr>
+              <td><span class="item-label"><img class="item-icon" src="imgs/${item}.png" alt="${item}"> ${item}</span></td>
+              <td>${stats.count}</td>
+              <td>${stats.itemBeaverChance.toFixed(2)}</td>
+            </tr>`;
+        }
+        table += `</table>`;
+        return createInstructionDialog(`
+          <p><strong>Here are your thieving results:</strong></p>
+          ${table}
+          <p><strong>Your Total Pet Chance Score: <span style="color:red;">${beaverChance.toFixed(2)}</span></strong></p>
+          <p><strong>To do another calculation, refresh this page (F5).</strong></p>
+        `);
+      }
+    };
+
+    jsPsych.run([
+      combined_input_trial,
+      calculate_trial,
+      feedback_trial
+    ], {
+      display_element: document.getElementById('jspsych-target')
+    });
+  </script>
+</head>
+<body>
+  <div id="jspsych-target"></div>
+</body>
+</html>
